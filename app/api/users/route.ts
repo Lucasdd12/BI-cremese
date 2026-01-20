@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
     // Try to create user in InstantDB by sending magic code
     // This will create the user in InstantDB if they don't exist
     try {
-      await db.auth.sendMagicCode({ email: normalizedEmail })
+      await db.auth.sendMagicCode(normalizedEmail)
     } catch (instantError: any) {
       // Log the error for debugging
       console.error('[users/POST] Erro ao enviar magic code:', {
