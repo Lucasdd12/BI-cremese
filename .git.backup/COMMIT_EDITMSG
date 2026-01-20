@@ -1,0 +1,6 @@
+feat: adiciona campo responsável e lista de indicadores filtrada por objetivo
+
+- Transforma campo Nome do Indicador em dropdown filtrado por objetivo selecionado
+- Adiciona lista completa de indicadores por objetivo estratégico da planilha
+- Adiciona campo 'Responsável pelo Indicador' entre Indicador e Situação
+- Atualiza interface e tabela de histórico para incluir responsável

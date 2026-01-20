@@ -1,0 +1,31 @@
+{
+  "name": "bi-estrategico-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "seed:objectives": "TS_NODE_TRANSPILE_ONLY=1 TS_NODE_COMPILER_OPTIONS='{\"module\":\"esnext\",\"moduleResolution\":\"node\"}' node -r ts-node/register scripts/seedObjectives.ts"
+  },
+  "dependencies": {
+    "@instantdb/admin": "^0.22.98",
+    "@instantdb/react": "^0.22.98",
+    "lucide-react": "^0.479.0",
+    "next": "^15.1.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  }
+}

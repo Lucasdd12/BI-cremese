@@ -1,0 +1,12 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["gru1"],
+  "env": {
+    "NEXT_PUBLIC_INSTANTDB_APP_ID": "@next_public_instantdb_app_id",
+    "INSTANTDB_ADMIN_TOKEN": "@instantdb_admin_token",
+    "ADMIN_API_TOKEN": "@admin_api_token"
+  }
+}
