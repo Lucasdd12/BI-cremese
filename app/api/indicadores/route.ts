@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const objetivos = await listObjectives(true)
-    const objetivo = objetivos.find((o) => o.id === objetivoId)
+    const objetivo = objetivos.find((o: any) => o.id === objetivoId) as any
     if (!objetivo) {
       return NextResponse.json({ message: 'Objetivo não encontrado' }, { status: 404 })
     }
@@ -74,8 +74,8 @@ export async function POST(req: NextRequest) {
       codigo,
       nome,
       objetivoId,
-      objetivoCodigo: objetivo.codigo,
-      objetivoNome: objetivo.nome,
+      objetivoCodigo: String(objetivo.codigo || ''),
+      objetivoNome: String(objetivo.nome || ''),
       ativo: ativo ?? true,
     })
 
