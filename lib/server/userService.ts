@@ -60,19 +60,25 @@ export async function createUser(payload: CreateUserPayload): Promise<string> {
 }
 
 export async function listUsers(): Promise<User[]> {
+  console.log('[listUsers] Iniciando busca de usuários...')
   const db = getAdminDb()
   const res = await db.query({
     users: {},
   })
 
   const users = (res.users || []) as User[]
+  console.log('[listUsers] Usuários encontrados no banco:', users.length)
+  console.log('[listUsers] Emails dos usuários:', users.map(u => u.email).join(', '))
   
   // Sort manually by createdAt (newest first)
-  return users.sort((a, b) => {
+  const sorted = users.sort((a, b) => {
     const dateA = new Date(a.createdAt || 0).getTime()
     const dateB = new Date(b.createdAt || 0).getTime()
     return dateB - dateA
   })
+  
+  console.log('[listUsers] Retornando', sorted.length, 'usuários ordenados')
+  return sorted
 }
 
 export async function getUserById(userId: string): Promise<User | null> {
