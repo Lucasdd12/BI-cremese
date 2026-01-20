@@ -36,7 +36,40 @@ type User = {
 }
 
 const fetchJson = async <T,>(url: string, init?: RequestInit): Promise<T> => {
-  const res = await fetch(url, init)
+  // Try to get auth token from InstantDB localStorage as fallback
+  // Cookies should be sent automatically, but this ensures token is available
+  let authToken: string | null = null
+  if (typeof window !== 'undefined') {
+    const appId = process.env.NEXT_PUBLIC_INSTANTDB_APP_ID || '1ba42d05-90b9-4d1a-80c7-38e9cb8ce7d2'
+    const possibleKeys = [
+      `instant_auth_token_${appId}`,
+      `instant-auth-token-${appId}`,
+      'instant_auth_token',
+      'instant-auth-token',
+      'instant_refresh_token',
+      'instant-refresh-token',
+    ]
+    for (const key of possibleKeys) {
+      const token = localStorage.getItem(key)
+      if (token) {
+        authToken = token
+        break
+      }
+    }
+  }
+  
+  // Merge headers to include Authorization if token found
+  const headers = new Headers(init?.headers)
+  if (authToken && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${authToken}`)
+  }
+  
+  const res = await fetch(url, {
+    ...init,
+    headers,
+    credentials: 'include', // Ensure cookies are sent
+  })
+  
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     const errorMsg = body.message || body.error || 'Erro na requisição'
