@@ -11,20 +11,54 @@ async function requireAdmin(req: NextRequest) {
   
   if (authHeader && authHeader.startsWith('Bearer ')) {
     authToken = authHeader.substring(7)
+    console.log('[requireAdmin] Token encontrado no header Authorization')
   } else {
-    // Fallback: Try to get from cookies
+    // Fallback: Try to get from cookies - InstantDB may use various cookie names
     const allCookies = req.cookies.getAll()
-    for (const cookie of allCookies) {
-      const name = cookie.name.toLowerCase()
-      if (name.includes('instant') || name.includes('auth') || name.includes('refresh')) {
+    console.log('[requireAdmin] Buscando token em cookies. Total de cookies:', allCookies.length)
+    
+    // Lista mais completa de possíveis nomes de cookies
+    const possibleCookieNames = [
+      'instant_auth_token',
+      'instant-auth-token',
+      'instant_token',
+      'instant-refresh-token',
+      'instant_refresh_token',
+      'auth_token',
+      'refresh_token',
+    ]
+    
+    // Primeiro tenta nomes exatos
+    for (const cookieName of possibleCookieNames) {
+      const cookie = req.cookies.get(cookieName)
+      if (cookie?.value) {
         authToken = cookie.value
+        console.log('[requireAdmin] Token encontrado no cookie:', cookieName)
         break
       }
+    }
+    
+    // Se não encontrou, tenta busca por substring
+    if (!authToken) {
+      for (const cookie of allCookies) {
+        const name = cookie.name.toLowerCase()
+        if (name.includes('instant') || name.includes('auth') || name.includes('refresh')) {
+          authToken = cookie.value
+          console.log('[requireAdmin] Token encontrado no cookie (busca por substring):', cookie.name)
+          break
+        }
+      }
+    }
+    
+    // Log todos os cookies para debug
+    if (!authToken) {
+      console.log('[requireAdmin] Cookies disponíveis:', allCookies.map(c => c.name).join(', '))
     }
   }
   
   if (!authToken) {
-    const error = new Error('Não autenticado')
+    console.error('[requireAdmin] Nenhum token de autenticação encontrado')
+    const error = new Error('Não autenticado - faça login primeiro')
     ;(error as any).status = 401
     throw error
   }
