@@ -157,7 +157,7 @@ export async function softDeleteObjective(objectiveId: string) {
   const indicadores = await db.query({
     indicadores: {
       $: {
-        where: { objetivoId },
+        where: { objetivoId: objectiveId },
       },
     },
   })
