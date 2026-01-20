@@ -7,16 +7,19 @@ import {
   updateIndicator,
 } from '@/lib/server/objectivesService'
 
-export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const indicadores = await listIndicators(true)
-  const indicador = indicadores.find((i) => i.id === params.id)
+  const indicador = indicadores.find((i) => i.id === id)
   if (!indicador) {
     return NextResponse.json({ message: 'Indicador não encontrado' }, { status: 404 })
   }
   return NextResponse.json({ indicador })
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  
   try {
     requireAdmin(req)
   } catch (error) {
@@ -41,7 +44,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ message: 'Objetivo não encontrado' }, { status: 404 })
     }
 
-    await updateIndicator(params.id, {
+    await updateIndicator(id, {
       codigo,
       nome,
       objetivoId,
@@ -60,7 +63,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  
   try {
     requireAdmin(req)
   } catch (error) {
@@ -69,7 +74,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   }
 
   try {
-    await softDeleteIndicator(params.id)
+    await softDeleteIndicator(id)
     return NextResponse.json(
       { message: 'Indicador desativado com sucesso' },
       { headers: { 'x-admin-header': getAdminHeaderName() } }

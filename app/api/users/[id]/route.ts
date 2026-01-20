@@ -42,11 +42,13 @@ async function requireAdmin(req: NextRequest) {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
+  
   try {
     await requireAdmin(req)
-    const user = await getUserById(params.id)
+    const user = await getUserById(id)
     if (!user) {
       return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 })
     }
@@ -63,8 +65,10 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
+  
   try {
     await requireAdmin(req)
     const body = await req.json()
@@ -89,7 +93,7 @@ export async function PUT(
       body.email = body.email.toLowerCase().trim()
     }
     
-    await updateUser(params.id, body)
+    await updateUser(id, body)
     return NextResponse.json({ message: 'Usuário atualizado com sucesso' })
   } catch (error: any) {
     console.error('[users/[id]/PUT] Erro:', error)
@@ -103,11 +107,13 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
+  
   try {
     await requireAdmin(req)
-    await deleteUser(params.id)
+    await deleteUser(id)
     return NextResponse.json({ message: 'Usuário deletado com sucesso' })
   } catch (error: any) {
     console.error('[users/[id]/DELETE] Erro:', error)

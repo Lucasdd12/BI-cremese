@@ -2,16 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin, getAdminHeaderName } from '@/lib/server/auth'
 import { listObjectives, softDeleteObjective, updateObjective } from '@/lib/server/objectivesService'
 
-export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const objetivos = await listObjectives(true)
-  const objetivo = objetivos.find((o) => o.id === params.id)
+  const objetivo = objetivos.find((o) => o.id === id)
   if (!objetivo) {
     return NextResponse.json({ message: 'Objetivo não encontrado' }, { status: 404 })
   }
   return NextResponse.json({ objetivo })
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  
   try {
     requireAdmin(req)
   } catch (error) {
@@ -27,7 +30,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 
   try {
-    await updateObjective(params.id, { codigo, nome, descricao, ativo })
+    await updateObjective(id, { codigo, nome, descricao, ativo })
     return NextResponse.json(
       { message: 'Objetivo atualizado com sucesso' },
       { headers: { 'x-admin-header': getAdminHeaderName() } }
@@ -38,7 +41,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  
   try {
     requireAdmin(req)
   } catch (error) {
@@ -47,7 +52,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   }
 
   try {
-    await softDeleteObjective(params.id)
+    await softDeleteObjective(id)
     return NextResponse.json(
       { message: 'Objetivo desativado com sucesso' },
       { headers: { 'x-admin-header': getAdminHeaderName() } }
