@@ -102,7 +102,6 @@ export default function Dashboard() {
     objetivos: {
       $: {
         where: { ativo: true },
-        order: { codigo: 'asc' },
       },
     },
     indicadores: {

@@ -59,7 +59,6 @@ export default function LancamentoMedicoes() {
     objetivos: {
       $: {
         where: { ativo: true },
-        order: { codigo: 'asc' },
       },
     },
     indicadores: {
