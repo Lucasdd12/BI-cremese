@@ -114,14 +114,22 @@ export async function GET(req: NextRequest) {
     const authHeader = req.headers.get('Authorization')
     let authToken: string | undefined
     
+    console.log('[users/GET] Verificando autenticação...')
+    console.log('[users/GET] Authorization header:', authHeader ? 'presente' : 'ausente')
+    
     if (authHeader && authHeader.startsWith('Bearer ')) {
       authToken = authHeader.substring(7)
+      console.log('[users/GET] Token encontrado no header')
     } else {
       const allCookies = req.cookies.getAll()
+      console.log('[users/GET] Total de cookies:', allCookies.length)
+      console.log('[users/GET] Nomes dos cookies:', allCookies.map(c => c.name).join(', '))
+      
       for (const cookie of allCookies) {
         const name = cookie.name.toLowerCase()
         if (name.includes('instant') || name.includes('auth') || name.includes('refresh')) {
           authToken = cookie.value
+          console.log('[users/GET] Token encontrado no cookie:', cookie.name)
           break
         }
       }
@@ -134,19 +142,25 @@ export async function GET(req: NextRequest) {
         const instantUser = await db.auth.verifyToken(authToken.trim() as any)
         if (instantUser?.email) {
           instantUserEmail = instantUser.email
+          console.log('[users/GET] Email obtido do token:', instantUserEmail)
         }
       } catch (error) {
+        console.error('[users/GET] Erro ao verificar token:', error)
         // Token verification failed, continue
       }
+    } else {
+      console.warn('[users/GET] Nenhum token encontrado')
     }
     
     if (!instantUserEmail) {
+      console.error('[users/GET] Não foi possível obter email do usuário')
       const error = new Error('Não autenticado - faça login primeiro')
       ;(error as any).status = 401
       throw error
     }
     
     const currentUser = await getUserByEmail(instantUserEmail)
+    console.log('[users/GET] Usuário encontrado:', currentUser ? `${currentUser.email} (${currentUser.role})` : 'não encontrado')
     
     if (!currentUser || currentUser.role !== 'admin') {
       const error = new Error('Acesso negado - apenas administradores')
@@ -155,6 +169,7 @@ export async function GET(req: NextRequest) {
     }
     
     const users = await listUsers()
+    console.log('[users/GET] Total de usuários encontrados:', users.length)
     return NextResponse.json({ users })
   } catch (error: any) {
     console.error('[users/GET] Erro:', error)

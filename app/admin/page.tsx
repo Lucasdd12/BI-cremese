@@ -158,11 +158,14 @@ export default function AdminPage() {
 
   const loadUsers = useCallback(async () => {
     if (!isAdmin || !currentUser?.email) {
+      console.log('[AdminPage] loadUsers: Não é admin ou não tem email:', { isAdmin, email: currentUser?.email })
       setUsers([])
       return
     }
     try {
+      console.log('[AdminPage] Carregando usuários...')
       const res = await fetchJson<{ users: User[] }>('/api/users')
+      console.log('[AdminPage] Resposta recebida:', res)
       setUsers(res.users || [])
       console.log('[AdminPage] Usuários carregados:', res.users?.length || 0)
     } catch (error) {
@@ -170,12 +173,13 @@ export default function AdminPage() {
       // Don't show toast for 401/403 errors - user might not be admin yet
       const err = error as any
       if (err.message?.includes('Acesso negado') || err.message?.includes('Não autenticado')) {
+        console.warn('[AdminPage] Erro de autenticação, limpando lista de usuários')
         setUsers([])
         return
       }
       showToast({ type: 'error', text: (error as Error).message })
     }
-  }, [isAdmin, showToast])
+  }, [isAdmin, currentUser?.email, showToast])
 
   useEffect(() => {
     const stored = window.localStorage.getItem('adminToken')
