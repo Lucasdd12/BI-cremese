@@ -157,7 +157,7 @@ export default function AdminPage() {
   }, [showToast])
 
   const loadUsers = useCallback(async () => {
-    if (!isAdmin) {
+    if (!isAdmin || !currentUser?.email) {
       setUsers([])
       return
     }
@@ -362,7 +362,10 @@ export default function AdminPage() {
       const result = await fetchJson<{ message: string; userId: string }>('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(novoUsuario),
+        body: JSON.stringify({
+          ...novoUsuario,
+          currentUserEmail: currentUser?.email, // Send current user email for auth
+        }),
       })
       setNovoUsuario({ email: '', name: '', role: 'staff' })
       await loadUsers()

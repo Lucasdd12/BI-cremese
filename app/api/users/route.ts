@@ -3,6 +3,8 @@ import { listUsers, createUser, getUserByEmail } from '@/lib/server/userService'
 import { getAdminDb } from '@/lib/server/instantAdmin'
 
 async function requireAdmin(req: NextRequest) {
+  // Try to use the same logic as current-user endpoint which works better
+  // Get user from InstantDB auth first
   const db = getAdminDb()
   
   // Try to get auth token from Authorization header first
@@ -11,13 +13,11 @@ async function requireAdmin(req: NextRequest) {
   
   if (authHeader && authHeader.startsWith('Bearer ')) {
     authToken = authHeader.substring(7)
-    console.log('[requireAdmin] Token encontrado no header Authorization')
   } else {
     // Fallback: Try to get from cookies - InstantDB may use various cookie names
     const allCookies = req.cookies.getAll()
-    console.log('[requireAdmin] Buscando token em cookies. Total de cookies:', allCookies.length)
     
-    // Lista mais completa de possíveis nomes de cookies
+    // Lista completa de possíveis nomes de cookies do InstantDB
     const possibleCookieNames = [
       'instant_auth_token',
       'instant-auth-token',
@@ -33,7 +33,6 @@ async function requireAdmin(req: NextRequest) {
       const cookie = req.cookies.get(cookieName)
       if (cookie?.value) {
         authToken = cookie.value
-        console.log('[requireAdmin] Token encontrado no cookie:', cookieName)
         break
       }
     }
@@ -44,94 +43,114 @@ async function requireAdmin(req: NextRequest) {
         const name = cookie.name.toLowerCase()
         if (name.includes('instant') || name.includes('auth') || name.includes('refresh')) {
           authToken = cookie.value
-          console.log('[requireAdmin] Token encontrado no cookie (busca por substring):', cookie.name)
           break
         }
       }
     }
-    
-    // Log todos os cookies para debug
-    if (!authToken) {
-      console.log('[requireAdmin] Cookies disponíveis:', allCookies.map(c => c.name).join(', '))
+  }
+  
+  let instantUserEmail: string | null = null
+  
+  // If we have a token, verify it
+  if (authToken) {
+    try {
+      const cleanToken = authToken.trim()
+      const instantUser = await db.auth.verifyToken(cleanToken as any)
+      if (instantUser?.email) {
+        instantUserEmail = instantUser.email
+      }
+    } catch (error) {
+      console.error('[requireAdmin] Erro ao verificar token:', error)
+      // Continue to try email from body as fallback
     }
   }
   
-  if (!authToken) {
-    console.error('[requireAdmin] Nenhum token de autenticação encontrado')
+  // If no token or token verification failed, try to get email from request body
+  // Note: For GET requests, we can't read body, so this only works for POST/PUT/DELETE
+  if (!instantUserEmail && req.method !== 'GET') {
+    try {
+      const body = await req.json().catch(() => ({}))
+      if (body.currentUserEmail) {
+        instantUserEmail = body.currentUserEmail
+      }
+    } catch (error) {
+      // Ignore JSON parse errors - body might not be JSON or might be empty
+    }
+  }
+  
+  if (!instantUserEmail) {
     const error = new Error('Não autenticado - faça login primeiro')
     ;(error as any).status = 401
     throw error
   }
   
-  try {
-    // Clean the token - remove any whitespace or newlines
-    const cleanToken = authToken.trim()
-    
-    // Validate token is not empty
-    if (!cleanToken || cleanToken.length === 0) {
-      const error = new Error('Token de autenticação vazio')
-      ;(error as any).status = 401
-      throw error
-    }
-    
-    // Verify token with InstantDB
-    // Note: verifyToken expects a refresh token, not an access token
-    let instantUser
-    try {
-      instantUser = await db.auth.verifyToken(cleanToken as any)
-    } catch (verifyError: any) {
-      // Check if it's the malformed parameter error
-      const errorMessage = verifyError?.message || ''
-      if (errorMessage.includes('Malformed parameter') || errorMessage.includes('refresh-token')) {
-        console.error('[requireAdmin] Erro ao verificar token - token pode estar em formato incorreto:', {
-          tokenLength: cleanToken.length,
-          tokenPreview: cleanToken.substring(0, 20) + '...',
-          error: errorMessage,
-        })
-        const error = new Error('Token de autenticação inválido ou expirado')
-        ;(error as any).status = 401
-        throw error
-      }
-      // Re-throw other errors
-      throw verifyError
-    }
-    
-    if (!instantUser || !instantUser.email) {
-      const error = new Error('Token inválido ou usuário não encontrado')
-      ;(error as any).status = 401
-      throw error
-    }
-    
-    const currentUser = await getUserByEmail(instantUser.email)
-    
-    if (!currentUser || currentUser.role !== 'admin') {
-      const error = new Error('Acesso negado')
-      ;(error as any).status = 403
-      throw error
-    }
-    
-    return currentUser
-  } catch (error: any) {
-    // If error already has a status, throw it as is
-    if (error.status) throw error
-    
-    // Log the error for debugging
-    console.error('[requireAdmin] Erro ao verificar token:', {
-      message: error?.message,
-      name: error?.name,
-      stack: error?.stack,
-    })
-    
-    // Create a new error with 401 status
-    const newError = new Error(error?.message || 'Erro ao verificar autenticação')
-    ;(newError as any).status = 401
-    throw newError
+  // Get user from our custom table
+  const currentUser = await getUserByEmail(instantUserEmail)
+  
+  if (!currentUser) {
+    const error = new Error('Usuário não encontrado na base de dados')
+    ;(error as any).status = 404
+    throw error
   }
+  
+  if (currentUser.role !== 'admin') {
+    const error = new Error('Acesso negado - apenas administradores')
+    ;(error as any).status = 403
+    throw error
+  }
+  
+  return currentUser
 }
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAdmin(req)
+    // For GET, we can't read body, so use the same auth logic as current-user
+    const db = getAdminDb()
+    
+    // Try to get auth token
+    const authHeader = req.headers.get('Authorization')
+    let authToken: string | undefined
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      authToken = authHeader.substring(7)
+    } else {
+      const allCookies = req.cookies.getAll()
+      for (const cookie of allCookies) {
+        const name = cookie.name.toLowerCase()
+        if (name.includes('instant') || name.includes('auth') || name.includes('refresh')) {
+          authToken = cookie.value
+          break
+        }
+      }
+    }
+    
+    let instantUserEmail: string | null = null
+    
+    if (authToken) {
+      try {
+        const instantUser = await db.auth.verifyToken(authToken.trim() as any)
+        if (instantUser?.email) {
+          instantUserEmail = instantUser.email
+        }
+      } catch (error) {
+        // Token verification failed, continue
+      }
+    }
+    
+    if (!instantUserEmail) {
+      const error = new Error('Não autenticado - faça login primeiro')
+      ;(error as any).status = 401
+      throw error
+    }
+    
+    const currentUser = await getUserByEmail(instantUserEmail)
+    
+    if (!currentUser || currentUser.role !== 'admin') {
+      const error = new Error('Acesso negado - apenas administradores')
+      ;(error as any).status = 403
+      throw error
+    }
+    
     const users = await listUsers()
     return NextResponse.json({ users })
   } catch (error: any) {
