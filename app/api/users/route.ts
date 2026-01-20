@@ -2,10 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import { listUsers, createUser, getUserByEmail } from '@/lib/server/userService'
 import { getAdminDb } from '@/lib/server/instantAdmin'
 
-async function requireAdmin(req: NextRequest) {
+async function requireAdmin(req: NextRequest, providedEmail?: string) {
   // Try to use the same logic as current-user endpoint which works better
   // Get user from InstantDB auth first
   const db = getAdminDb()
+  
+  // If email was provided directly, use it
+  if (providedEmail) {
+    const currentUser = await getUserByEmail(providedEmail)
+    if (!currentUser) {
+      const error = new Error('Usuário não encontrado na base de dados')
+      ;(error as any).status = 404
+      throw error
+    }
+    if (currentUser.role !== 'admin') {
+      const error = new Error('Acesso negado - apenas administradores')
+      ;(error as any).status = 403
+      throw error
+    }
+    return currentUser
+  }
   
   // Try to get auth token from Authorization header first
   const authHeader = req.headers.get('Authorization')
@@ -62,19 +78,6 @@ async function requireAdmin(req: NextRequest) {
     } catch (error) {
       console.error('[requireAdmin] Erro ao verificar token:', error)
       // Continue to try email from body as fallback
-    }
-  }
-  
-  // If no token or token verification failed, try to get email from request body
-  // Note: For GET requests, we can't read body, so this only works for POST/PUT/DELETE
-  if (!instantUserEmail && req.method !== 'GET') {
-    try {
-      const body = await req.json().catch(() => ({}))
-      if (body.currentUserEmail) {
-        instantUserEmail = body.currentUserEmail
-      }
-    } catch (error) {
-      // Ignore JSON parse errors - body might not be JSON or might be empty
     }
   }
   
@@ -171,10 +174,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin(req)
-    
+    // Read body first to get currentUserEmail for auth
     const body = await req.json()
-    const { email, name, role } = body
+    const { email, name, role, currentUserEmail } = body
+    
+    // Create a modified request with currentUserEmail for requireAdmin
+    // Since we can't modify req, we'll pass email directly to a modified requireAdmin
+    await requireAdminWithEmail(req, currentUserEmail)
+    
+    // Continue with original body (without currentUserEmail)
 
     if (!email || !name || !role) {
       return NextResponse.json(
