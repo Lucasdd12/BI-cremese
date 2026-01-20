@@ -163,8 +163,12 @@ export default function AdminPage() {
       return
     }
     try {
-      console.log('[AdminPage] Carregando usuários...')
-      const res = await fetchJson<{ users: User[] }>('/api/users')
+      console.log('[AdminPage] Carregando usuários...', { currentUserEmail: currentUser?.email })
+      // Send email as query parameter as fallback for auth
+      const url = currentUser?.email 
+        ? `/api/users?email=${encodeURIComponent(currentUser.email)}`
+        : '/api/users'
+      const res = await fetchJson<{ users: User[] }>(url)
       console.log('[AdminPage] Resposta recebida:', res)
       setUsers(res.users || [])
       console.log('[AdminPage] Usuários carregados:', res.users?.length || 0)

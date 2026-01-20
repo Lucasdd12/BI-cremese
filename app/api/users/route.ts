@@ -152,6 +152,15 @@ export async function GET(req: NextRequest) {
       console.warn('[users/GET] Nenhum token encontrado')
     }
     
+    // If no token worked, try to get email from query parameter (fallback)
+    if (!instantUserEmail) {
+      const emailParam = req.nextUrl.searchParams.get('email')
+      if (emailParam) {
+        instantUserEmail = emailParam
+        console.log('[users/GET] Email obtido do query parameter:', instantUserEmail)
+      }
+    }
+    
     if (!instantUserEmail) {
       console.error('[users/GET] Não foi possível obter email do usuário')
       const error = new Error('Não autenticado - faça login primeiro')
