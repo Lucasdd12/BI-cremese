@@ -23,6 +23,13 @@ async function requireAdmin(req: NextRequest) {
   
   try {
     const instantUser = await db.auth.verifyToken(authToken as any)
+    
+    if (!instantUser || !instantUser.email) {
+      const error = new Error('Token inválido')
+      ;(error as any).status = 401
+      throw error
+    }
+    
     const currentUser = await getUserByEmail(instantUser.email)
     
     if (!currentUser || currentUser.role !== 'admin') {
