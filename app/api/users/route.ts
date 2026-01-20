@@ -178,11 +178,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { email, name, role, currentUserEmail } = body
     
-    // Create a modified request with currentUserEmail for requireAdmin
-    // Since we can't modify req, we'll pass email directly to a modified requireAdmin
-    await requireAdminWithEmail(req, currentUserEmail)
-    
-    // Continue with original body (without currentUserEmail)
+    // Verify admin access using provided email
+    await requireAdmin(req, currentUserEmail)
 
     if (!email || !name || !role) {
       return NextResponse.json(
