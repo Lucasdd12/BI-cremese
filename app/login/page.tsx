@@ -68,19 +68,23 @@ export default function LoginPage() {
       }
 
       // User exists, proceed to send magic code
-      const result = await db.auth.sendMagicCode({ email: normalizedEmail })
+      const result = await db.auth.sendMagicCode(normalizedEmail)
       setCodeSent(true)
       setMessage({
         type: 'success',
         text: 'Código enviado para seu email! Verifique sua caixa de entrada.',
       })
-      // In development, log the code if available
-      if (process.env.NODE_ENV === 'development' && result?.code) {
-        console.log('[DEV] Magic code:', result.code)
-        setMessage({
-          type: 'success',
-          text: `Código enviado! (DEV: ${result.code})`,
-        })
+      // In development, log if result has code
+      if (process.env.NODE_ENV === 'development') {
+        // The admin SDK may return code in some cases
+        const code = (result as any)?.code
+        if (code) {
+          console.log('[DEV] Magic code:', code)
+          setMessage({
+            type: 'success',
+            text: `Código enviado! (DEV: ${code})`,
+          })
+        }
       }
     } catch (error: any) {
       console.error('Erro ao enviar código:', error)
