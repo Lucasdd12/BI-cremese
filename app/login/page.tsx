@@ -68,7 +68,7 @@ export default function LoginPage() {
       }
 
       // User exists, proceed to send magic code
-      const result = await db.auth.sendMagicCode(normalizedEmail)
+      const result = await db.auth.sendMagicCode({ email: normalizedEmail })
       setCodeSent(true)
       setMessage({
         type: 'success',
